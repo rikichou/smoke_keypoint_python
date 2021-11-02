@@ -495,8 +495,17 @@ class SmokeKeypoint(object):
             format='xyxy',
             dataset_info=self.dataset_info)
 
-        # display
-        img = vis_pose_result(
-            self.pose_model, image_face, pose_results, dataset_info=self.dataset_info, show=False)
+        # return keypoints and scores(a list of points include scores)
+        points = pose_results[0]['keypoints']
+        org_points = []
+        for p in points:
+            x,y,score = p
+            org_points.append([x+isx, y+isy, score])
 
-        return img
+        return org_points
+
+        # display
+        # img = vis_pose_result(
+        #     self.pose_model, image_face, pose_results, dataset_info=self.dataset_info, show=False)
+        #
+        # return img
