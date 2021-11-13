@@ -174,7 +174,7 @@ def _inference_single_pose_model(model,
 
     # build the data pipeline
     channel_order = cfg.test_pipeline[0].get('channel_order', 'rgb')
-    test_pipeline = [LoadImage(channel_order=channel_order)
+    test_pipeline = [LoadImage(channel_order=channel_order, color_type='grayscale')
                      ] + cfg.test_pipeline[1:]
     test_pipeline = Compose(test_pipeline)
 
@@ -451,15 +451,40 @@ def inference_top_down_pose_model(model,
 
 class SmokeKeypoint(object):
     def __init__(self, config_file_path='models/litehrnet_18_smoke_keypoint_256x256/litehrnet_18_smoke_keypoint_256x256.py',
-                 ckpt_path='models/litehrnet_18_smoke_keypoint_256x256/epoch_40.pth', device='cpu'):
+                 ckpt_path='models/litehrnet_18_smoke_keypoint_256x256/epoch_40.pth', device='cpu', grayscale=False):
         """
         mmcls facial expression
         """
+        self.grayscale = grayscale
         self.pose_model = init_pose_model(config_file_path, ckpt_path, device=device)
         self.dataset_info = DatasetInfo(self.pose_model.cfg.data['test'].get(
         'dataset_info', None))
 
-    def get_input_face(self, image, rect):
+    def get_input_face(self, image, facerect):
+        sx, sy, ex, ey = facerect
+        h, w, c = image.shape
+
+        res = 200
+        cx = sx + (ex - sx) / 2
+        cy = ey - (ey - sy) / 3
+
+        osx = cx - res
+        osy = cy - res
+        oex = cx + res
+        oey = cy + res
+
+        sx = int(max(0, osx))
+        sy = int(max(0, osy))
+        ex = int(min(w - 1, oex))
+        ey = int(min(h - 1, oey))
+
+        return image[sy:ey, sx:ex, :], sx, sy, ex, ey
+
+    def get_det_area(self, image, rect):
+        sx, sy, ex, ey = rect
+        return image[sy:ey, sx:ex, :], sx, sy, ex, ey
+
+    def get_input_face_old(self, image, rect):
         sx, sy, ex, ey = rect
         h, w, c = image.shape
 
@@ -479,13 +504,17 @@ class SmokeKeypoint(object):
 
         return image[sy:ey, sx:ex, :], sx, sy, ex, ey
 
-    def __call__(self, image, face_rect):
+    def __call__(self, image, det_rect):
         """
         forward with image path or numpy array
         :param image_path:
         :return: [[sx,sy,ex,ey,prob], [...]]
         """
-        image_face, isx, isy, iex, iey = self.get_input_face(image, face_rect)
+        image_face, isx, isy, iex, iey = self.get_det_area(image, det_rect)
+        self.det_area = (isx, isy, iex, iey)
+
+        if self.grayscale:
+            image_face = cv2.cvtColor(image_face, cv2.COLOR_BGR2GRAY)
 
         # inference image with
         pose_results, _ = inference_top_down_pose_model(
