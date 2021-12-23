@@ -138,7 +138,7 @@ class SmokeKeypointCaffe(object):
         input_data = self.preprocessing(faceimage)
 
         # predict and get result
-        self.model.blobs['input.1'].data[...] = input_data
+        self.model.blobs['input'].data[...] = input_data
         output = self.model.forward()
 
-        return self.decode(np.array(output['168'][0]))
+        return self.decode(np.array(output['output'][0]))

@@ -1,7 +1,7 @@
 layer {
-  name: "input.1"
+  name: "input"
   type: "Input"
-  top: "input.1"
+  top: "input"
   input_param {
     shape {
       dim: 1
@@ -14,7 +14,7 @@ layer {
 layer {
   name: "Conv_0"
   type: "Convolution"
-  bottom: "input.1"
+  bottom: "input"
   top: "169"
   convolution_param {
     num_output: 16
@@ -525,7 +525,7 @@ layer {
   name: "Conv_41"
   type: "Convolution"
   bottom: "167"
-  top: "168"
+  top: "output"
   convolution_param {
     num_output: 3
     bias_term: true
