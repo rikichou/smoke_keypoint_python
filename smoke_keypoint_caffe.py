@@ -20,8 +20,8 @@ class SmokeKeypointCaffe(object):
         self.model = caffe.Net(model_def, model_weights, caffe.TEST)
 
         self.image_size = (128, 128)
-        self.mean = None
-        self.std = 255
+        self.mean = np.array([127, 127, 127])
+        self.std = None
 
     def get_input_face(self, image, rect):
         sx,sy,ex,ey = rect
@@ -69,12 +69,12 @@ class SmokeKeypointCaffe(object):
         image = cv2.resize(image, self.image_size)
 
         # BGR-->GRAY [128, 128, 1]
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # (img - mean) / std [128, 128]
         data = image.astype(np.float32)
         data = self.imnormalize(data, self.mean, self.std, to_rgb=False)
-        data = data[:,:,np.newaxis]
+        # data = data[:,:,np.newaxis]
         
         # H,W,C --> C,H,W
         data = np.transpose(data, (2, 0, 1)).astype(np.float32)
