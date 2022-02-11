@@ -3,7 +3,9 @@ import cv2
 
 import smoke_keypoint_caffe as skc
 
-sk = skc.SmokeKeypointCaffe(model_def='models/restiny_128x128x3/deploy.prototxt', model_weights='models/restiny_128x128x3/deploy.caffemodel')
+model_name = 'restiny_org_128x128x3'
+
+sk = skc.SmokeKeypointCaffe(model_def='models/{}/deploy.prototxt'.format(model_name), model_weights='models/{}/deploy.caffemodel'.format(model_name))
 
 imgpath = 'images/1635564856077.jpg'
 image = cv2.imread(imgpath)
