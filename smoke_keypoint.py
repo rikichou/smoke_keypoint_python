@@ -504,6 +504,40 @@ class SmokeKeypoint(object):
 
         return image[sy:ey, sx:ex, :], sx, sy, ex, ey
 
+    def _get_max_preds(self, heatmaps):
+        """Get keypoint predictions from score maps.
+
+        Note:
+            batch_size: N
+            num_keypoints: K
+            heatmap height: H
+            heatmap width: W
+
+        Args:
+            heatmaps (np.ndarray[N, K, H, W]): model predicted heatmaps.
+
+        Returns:
+            tuple: A tuple containing aggregated results.
+
+            - preds (np.ndarray[N, K, 2]): Predicted keypoint location.
+            - maxvals (np.ndarray[N, K, 1]): Scores (confidence) of the keypoints.
+        """
+        assert isinstance(heatmaps,
+                        np.ndarray), ('heatmaps should be numpy.ndarray')
+        assert heatmaps.ndim == 4, 'batch_images should be 4-ndim'
+
+        N, K, _, W = heatmaps.shape
+        heatmaps_reshaped = heatmaps.reshape((N, K, -1))
+        idx = np.argmax(heatmaps_reshaped, 2).reshape((N, K, 1))
+        maxvals = np.amax(heatmaps_reshaped, 2).reshape((N, K, 1))
+
+        preds = np.tile(idx, (1, 1, 2)).astype(np.float32)
+        preds[:, :, 0] = preds[:, :, 0] % W
+        preds[:, :, 1] = preds[:, :, 1] // W
+
+        preds = np.where(np.tile(maxvals, (1, 1, 2)) > 0.0, preds, -1)
+        return preds, maxvals   
+
     def __call__(self, image, det_rect):
         """
         forward with image path or numpy array
@@ -517,13 +551,16 @@ class SmokeKeypoint(object):
             image_face = cv2.cvtColor(image_face, cv2.COLOR_BGR2GRAY)
 
         # inference image with
-        pose_results, _ = inference_top_down_pose_model(
+        pose_results, heatmap = inference_top_down_pose_model(
             self.pose_model,
             image_face,
             None,
             format='xyxy',
-            dataset_info=self.dataset_info)
+            dataset_info=self.dataset_info,
+            return_heatmap=True)
 
+        heatmap = heatmap[0]['heatmap']
+        #print(self._get_max_preds(heatmap))
         # return keypoints and scores(a list of points include scores)
         points = pose_results[0]['keypoints']
         org_points = []
